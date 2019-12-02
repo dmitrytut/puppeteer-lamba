@@ -1,0 +1,16 @@
+type: "object"
+  properties:
+    checkSpeed:
+      type: "boolean"
+    trackCalls:
+      type: "boolean"
+    viewPortHeight:
+      type: "integer"
+      format: "int32"
+    viewPortWidth:
+      type: "integer"
+      format: "int32"
+    fullPage:
+      type: "boolean"
+    userAgent:
+      type: "string"

@@ -1,0 +1,12 @@
+type: "object"
+properties:
+  html:
+    type: "string"
+  screenshot:
+    type: "string"
+  externalRequests:
+    type: "array"
+    items:
+      type: "string"
+  performanceMetrics:
+    type: "object"

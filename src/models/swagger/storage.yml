@@ -1,0 +1,9 @@
+type: "object"
+properties:
+  s3:
+    type: "object"
+    properties:
+      bucket:
+        type: "string"
+      path:
+        type: "string"

@@ -1,0 +1,10 @@
+type: "object"
+properties:
+  src:
+    type: "string"
+  storage:
+    $ref: "storage.yml"
+  proxy:
+    $ref: "proxy.yml"
+  options:
+    $ref: "options.yml"

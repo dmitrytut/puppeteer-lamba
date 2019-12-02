@@ -1,0 +1,30 @@
+{
+  "name": "puppeteer-lambda",
+  "version": "0.0.1",
+  "main": "handler.js",
+  "author": "Dmitry Tutykhin <dmitry.tutykhin@ibm.com>",
+  "license": "MIT",
+  "scripts": {
+    "clean-build": "rm -rf .build",
+    "build": "yarn clean-build && tsc",
+    "deploy": "yarn build && serverless deploy --verbose",
+    "dev": "yarn build && IS_OFFLINE=true sls offline start --port 3003 --stage dev --data --basePath / --prefix dev"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.568.0",
+    "chrome-aws-lambda": "^2.0.0",
+    "middy": "^0.30.4",
+    "puppeteer-core": "^2.0.0",
+    "serverless": "1.56.1",
+    "typescript": "^3.6.4"
+  },
+  "devDependencies": {
+    "@types/puppeteer-core": "^1.9.0",
+    "puppeteer": "^2.0.0",
+    "serverless-aws-documentation": "^1.1.0",
+    "serverless-offline": "^6.0.0-alpha.0",
+    "serverless-plugin-include-dependencies": "^4.0.0",
+    "serverless-plugin-typescript": "^1.1.9",
+    "serverless-s3-local": "^0.5.3"
+  }
+}

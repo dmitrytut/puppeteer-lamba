@@ -1,0 +1,131 @@
+service: puppeteer-lambda
+frameworkVersion: "1.56.1"
+
+provider:
+  name: aws
+  versionFunctions: false
+  runtime: nodejs10.x
+  region: us-east-1
+  stage: dev
+  profile: max 
+
+plugins:
+  - serverless-aws-documentation
+  - serverless-s3-local
+  - serverless-plugin-typescript
+  - serverless-plugin-include-dependencies
+  - serverless-offline
+
+custom:
+  documentation:
+    info:
+      description: "API for crawling and gathering information about sites."
+    models:
+      -
+        name: "RequestBody"
+        description: "Request model for site crawling"
+        contentType: "application/json"
+        schema:
+          type: "object"
+          properties:
+            src:
+              type: "string"
+            storage:
+              type: "object"
+              properties:
+                s3:
+                  type: "object"
+                  properties:
+                    bucket:
+                      type: "string"
+                    path:
+                      type: "string"
+            proxy:
+              type: "object"
+              properties:
+                url:
+                  type: "string"
+                port:
+                  type: "string"
+                login:
+                  type: "string"
+                password:
+                  type: "string"
+            options:
+              type: "object"
+              properties:
+                checkSpeed:
+                  type: "boolean"
+                trackCalls:
+                  type: "boolean"
+                viewPortHeight:
+                  type: "integer"
+                  format: "int32"
+                viewPortWidth:
+                  type: "integer"
+                  format: "int32"
+                fullPage:
+                  type: "boolean"
+                userAgent:
+                  type: "string"
+      -
+        name: "ResponseBody"
+        description: "Response model for site crawling"
+        contentType: "application/json"
+        schema:
+          type: "object"
+          properties:
+            html:
+              type: "string"
+            screenshot:
+              type: "string"
+            externalRequests:
+              type: "array"
+              items:
+                type: "string"
+            performanceMetrics:
+              type: "object"
+  serverless-offline:
+    location: ./
+
+functions:
+  crawl:
+    handler: src/index.crawl
+    timeout: 30
+    memorySize: 1472
+    events:
+      - http:
+          path: /crawl
+          method: post
+          documentation:
+            summary: "Get information about specified site."
+            description: "Get fully rendered html, screenshot, performance metrics and external requests for specified resource."
+            requestBody:
+              description: "Request body description"
+            queryParams:
+              -
+                name: "type"
+                description: "Type of the source. Must be 'url' or 'html'."
+                type: "string"
+              -
+                name: "store"
+                description: "Boolean if information should bde stored to the S3. Default: 'false'.}."
+                type: "boolean"
+              -
+                name: "proxy"
+                description: "Boolean if requests should be done through proxy. Default: 'false'.}."
+                type: "boolean"
+            requestModels:
+              "application/json": "RequestBody"
+            methodResponses:
+              -
+                statusCode: "200"
+                responseBody:
+                  description: "Response with information in JSON format."
+                responseModels:
+                  "application/json": "ResponseBody"
+              -
+                statusCode: "201"
+                description: "Response if information been stored to the external storage, for example S3."
+    cors:
+      origin: '*'
