@@ -7,7 +7,7 @@ provider:
   runtime: nodejs10.x
   region: us-east-1
   stage: dev
-  profile: max 
+  profile: max
 
 plugins:
   - serverless-aws-documentation
@@ -85,6 +85,10 @@ custom:
                 type: "string"
             performanceMetrics:
               type: "object"
+            redirectChain:
+              type: "array"
+              items:
+                type: "string"
   serverless-offline:
     location: ./
 

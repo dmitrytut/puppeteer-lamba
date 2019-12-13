@@ -6,5 +6,6 @@ export const resultsExtensions: { [key in keyof ResponsePayload]: string } = {
   screenshot: '.png',
   externalRequests: '-calls.json',
   performanceMetrics: '-performance.json',
+  redirectChain: '-redirects.json',
 };
 

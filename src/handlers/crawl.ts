@@ -113,12 +113,14 @@ const handler = async (event: any) => {
   // Initiate page execution.
   if (type === ESourceType.URL) {
     log('Try to open URL: ', src);
-    await page.goto(src, puppeteerOptions);
-    // const response = await page.goto(src, puppeteerOptions);
-    // if (response && response.status() < 400) {
-    //   // Wait for all connections done.
-    //   await page.waitFor(2000);
-    // }
+    const response = await page.goto(src, puppeteerOptions) as PuppeteerResponse;
+
+    // Get redirect chain.
+    const redirectChain = response.request().redirectChain() || [];
+    results = {
+      ...results,
+      redirectChain: redirectChain.map(r => r.url()),
+    };
   } else if (type === ESourceType.HTML) {
     log('Try to open render passed html.');
     await page.setContent(src, puppeteerOptions);

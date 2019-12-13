@@ -17,5 +17,8 @@ export interface ResponsePayload {
   /** Performance metrics. */
   performanceMetrics?: PerformanceMetricsResult;
 
+  /** Redirect urls chain .*/
+  redirectChain: string[];
+
   [key:string]: any;
 }
