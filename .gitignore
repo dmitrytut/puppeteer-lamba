@@ -110,5 +110,6 @@ typings/
 src/uploads/*
 
 tmp
+.idea
 
 # End of https://www.gitignore.io/api/node,visualstudiocode
