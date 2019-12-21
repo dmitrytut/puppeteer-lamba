@@ -1,4 +1,5 @@
 import chromium from "chrome-aws-lambda";
+import { getStatusText } from 'http-status-codes';
 import middy from "middy";
 import {
   cors, doNotWaitForEmptyEventLoop, httpErrorHandler, httpHeaderNormalizer, jsonBodyParser,
@@ -12,6 +13,7 @@ import {
 import { initializeS3, uploadResults } from '../helpers/s3';
 import { checkRequestData } from '../helpers/request';
 import { log } from '../helpers/logger';
+import { createErrorResponse } from '../helpers/response';
 
 const handler = async (event: any) => {
   const { type = ESourceType.URL, store, proxy } = event.queryStringParameters as QueryParams;
@@ -100,6 +102,9 @@ const handler = async (event: any) => {
       // TODO: Put loading status processing here.
     }
   });
+  page.on("error", err => {
+    console.error("error", err);
+  });
 
   // Set viewport.
   if (viewPortWidth && viewPortHeight) {
@@ -109,16 +114,20 @@ const handler = async (event: any) => {
     });
   }
 
-  // let response: PuppeteerResponse | null = {} as PuppeteerResponse;
   // Initiate page execution.
   if (type === ESourceType.URL) {
     log('Try to open URL: ', src);
-    await page.goto(src, puppeteerOptions);
-    // const response = await page.goto(src, puppeteerOptions);
-    // if (response && response.status() < 400) {
-    //   // Wait for all connections done.
-    //   await page.waitFor(2000);
-    // }
+    try {
+      const response: PuppeteerResponse = await page.goto(src, puppeteerOptions) as PuppeteerResponse;
+      const statusCode = response.status();
+      if (statusCode > 400) {
+        return createErrorResponse(getStatusText(statusCode), statusCode, results);
+      }
+    } catch (error) {
+      // If we have an exception, there was a fatal error and request even couldn't reach or process by web-server,
+      // so at this level we don't have any http status code, only message.
+      return createErrorResponse(error.message, undefined, results);
+    }
   } else if (type === ESourceType.HTML) {
     log('Try to open render passed html.');
     await page.setContent(src, puppeteerOptions);

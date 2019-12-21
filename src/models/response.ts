@@ -1,5 +1,6 @@
 import { PerformanceMetricsResult } from '../models/performance';
 import { QueryParams } from '../models/request';
+import { ErrorObject } from '../models/error';
 
 /**
  * Interface defining response payload if {@link QueryParams.storeData} set.
@@ -16,6 +17,9 @@ export interface ResponsePayload {
 
   /** Performance metrics. */
   performanceMetrics?: PerformanceMetricsResult;
+
+  /** Error. */
+  error?: ErrorObject;
 
   [key:string]: any;
 }
