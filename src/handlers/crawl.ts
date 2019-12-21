@@ -1,11 +1,12 @@
-import chromium from "chrome-aws-lambda";
+import chromium from 'chrome-aws-lambda';
 import { getStatusText } from 'http-status-codes';
-import middy from "middy";
+import middy from 'middy';
 import {
   cors, doNotWaitForEmptyEventLoop, httpErrorHandler, httpHeaderNormalizer, jsonBodyParser,
-} from "middy/middlewares";
-import puppeteer, { DirectNavigationOptions, ScreenshotOptions, Response as PuppeteerResponse } from "puppeteer-core";
+} from 'middy/middlewares';
+import puppeteer, { DirectNavigationOptions, ScreenshotOptions, Response as PuppeteerResponse } from 'puppeteer-core';
 
+import { qsBoolParser } from '../middlewares/qsBoolParser';
 import { initializeCDPClient } from '../helpers/performance';
 import {
   ESourceType, QueryParams, RequestBody, ResponsePayload, S3Settings, Metric, PerformanceMetricsResult, Proxy,
@@ -36,8 +37,12 @@ const handler = async (event: any) => {
 
   log('Executed with event: ', event);
 
-  // Check request parameters and data.
-  checkRequestData(type, store, { s3: s3Settings }, { viewPortWidth, viewPortHeight });
+  try {
+    // Check request parameters and data.
+    checkRequestData(type, store, { s3: s3Settings }, { viewPortWidth, viewPortHeight });
+  } catch (e) {
+    return createErrorResponse(e.message, undefined, results, 400)
+  }
 
   log('Request params successfully checked.');
 
@@ -108,6 +113,7 @@ const handler = async (event: any) => {
 
   // Set viewport.
   if (viewPortWidth && viewPortHeight) {
+    log('Setting viewport.');
     await page.setViewport({
       width: viewPortWidth,
       height: viewPortHeight,
@@ -117,25 +123,29 @@ const handler = async (event: any) => {
   // Initiate page execution.
   if (type === ESourceType.URL) {
     log('Try to open URL: ', src);
+    let response: PuppeteerResponse;
     try {
-      const response: PuppeteerResponse = await page.goto(src, puppeteerOptions) as PuppeteerResponse;
-
-      const statusCode = response.status();
-      if (statusCode > 400) {
-        return createErrorResponse(getStatusText(statusCode), statusCode, results);
-      }
-
-      // Get redirect chain.
-      const redirectChain = response.request().redirectChain() || [];
-      results = {
-        ...results,
-        redirectChain: redirectChain.map(r => r.url()),
-      };
-    } catch (error) {
+      response = await page.goto(src, puppeteerOptions) as PuppeteerResponse;
+    } catch (e) {
+      log('Error while request processing.');
       // If we have an exception, there was a fatal error and request even couldn't reach or process by web-server,
       // so at this level we don't have any http status code, only message.
-      return createErrorResponse(error.message, undefined, results);
+      return createErrorResponse(e.message, undefined, results);
     }
+
+    // Check if error.
+    const statusCode = response.status();
+    if (statusCode > 400) {
+      return createErrorResponse(getStatusText(statusCode), statusCode, results);
+    }
+
+    // Get redirect chain.
+    log('Try to determine redirect chain.');
+    const redirectChain = response.request().redirectChain() || [];
+    results = {
+      ...results,
+      redirectChain: redirectChain.map(r => r.url()),
+    };
   } else if (type === ESourceType.HTML) {
     log('Try to open render passed html.');
     await page.setContent(src, puppeteerOptions);
@@ -200,8 +210,13 @@ const handler = async (event: any) => {
     // Initialize S3.
     const s3 = initializeS3();
 
-    // Upload files to the S3.
-    await uploadResults(s3, s3Settings, results);
+    try {
+      // Upload files to the S3.
+      await uploadResults(s3, s3Settings, results);
+    } catch (e) {
+      log('Error while uploading to the S3.');
+      return createErrorResponse(e.message, undefined, results, 500)
+    }
   }
 
   // Close browser, we don't need it anymore.
@@ -217,6 +232,7 @@ const handler = async (event: any) => {
         performanceMetrics: results.performanceMetrics,
         externalRequests: results.externalRequests,
         html: results.html,
+        redirectChain: results.redirectChain,
       }),
     }
     : {
@@ -233,4 +249,5 @@ export const crawl = middy(handler)
   .use(jsonBodyParser())
   .use(cors())
   .use(doNotWaitForEmptyEventLoop())
-  .use(httpErrorHandler());
+  .use(httpErrorHandler())
+  .use(qsBoolParser());
