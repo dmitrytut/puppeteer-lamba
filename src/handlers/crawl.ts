@@ -119,10 +119,18 @@ const handler = async (event: any) => {
     log('Try to open URL: ', src);
     try {
       const response: PuppeteerResponse = await page.goto(src, puppeteerOptions) as PuppeteerResponse;
+
       const statusCode = response.status();
       if (statusCode > 400) {
         return createErrorResponse(getStatusText(statusCode), statusCode, results);
       }
+
+      // Get redirect chain.
+      const redirectChain = response.request().redirectChain() || [];
+      results = {
+        ...results,
+        redirectChain: redirectChain.map(r => r.url()),
+      };
     } catch (error) {
       // If we have an exception, there was a fatal error and request even couldn't reach or process by web-server,
       // so at this level we don't have any http status code, only message.

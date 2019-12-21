@@ -21,5 +21,8 @@ export interface ResponsePayload {
   /** Error. */
   error?: ErrorObject;
 
+  /** Redirect urls chain .*/
+  redirectChain: string[];
+
   [key:string]: any;
 }

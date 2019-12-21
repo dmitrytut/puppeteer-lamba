@@ -85,6 +85,10 @@ custom:
                 type: "string"
             performanceMetrics:
               type: "object"
+            redirectChain:
+              type: "array"
+              items:
+                type: "string"
   serverless-offline:
     location: ./
 
