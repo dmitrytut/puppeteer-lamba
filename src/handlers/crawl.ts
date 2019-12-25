@@ -30,10 +30,12 @@ const handler = async (event: any) => {
     userAgent,
   } = options;
   // We can't use networkidle0, because in this case we can't crawl sites with websockets.
-  const puppeteerOptions: DirectNavigationOptions = { waitUntil: ["networkidle0", "load", "domcontentloaded"] };
+  const puppeteerOptions: DirectNavigationOptions = { timeout: 120000, waitUntil: ["networkidle0", "load", "domcontentloaded"] };
   const isOffline = process.env.IS_OFFLINE;
   let results: ResponsePayload = {} as ResponsePayload;
   let externalRequests: string[] = [];
+  // Determined by url changing, not 3xx response.
+  let heuristicRedirectChain: string[] = [];
 
   log('Executed with event: ', event);
 
@@ -92,20 +94,37 @@ const handler = async (event: any) => {
 
   // Collect external requests.
   await page.setRequestInterception(true);
+  let previousUrlObject: URL;
   page.on('request', request => {
     const url = request.url();
     externalRequests.push(url);
     request.continue();
   });
-  page.on("response", response => {
+  page.on('response', response => {
     const request = response.request();
     const url = request.url();
     const status = response.status();
     const message = response.statusText();
-    if (src === ESourceType.URL && url === src) {
-      log("Response url:", url, "Status:", status, "Message:", message);
-      // TODO: Put loading status processing here.
+
+    log("Response url:", url, "Status:", status, "Message:", message);
+
+    // Determine redirects by url changing (only for requests with 200 status codes).
+    // Get origin (scheme://hostname) from the url.
+    const urlObject = new URL(url);
+    // To skip all resources calls, take only calls for 'document' resources.
+    if (request.resourceType() === 'document' &&
+      request.isNavigationRequest() &&
+      response.status() === 200 &&
+      previousUrlObject &&
+      urlObject.origin !== previousUrlObject.origin
+    ) {
+      if (!heuristicRedirectChain.length) {
+        // Add original source of redirection into the chain.
+        heuristicRedirectChain.push(previousUrlObject.href);
+      }
+      heuristicRedirectChain.push(url);
     }
+    previousUrlObject = urlObject;
   });
   page.on("error", err => {
     console.error("error", err);
@@ -146,6 +165,13 @@ const handler = async (event: any) => {
       ...results,
       redirectChain: redirectChain.map(r => r.url()),
     };
+    if (Boolean(heuristicRedirectChain.length)) {
+      log('Try to merge redirect chain with heuristic redirect chain.');
+      // Add only unique values to the redirect chain.
+      heuristicRedirectChain.forEach(url =>
+        !results.redirectChain.includes(url) && results.redirectChain.push(url)
+      );
+    }
   } else if (type === ESourceType.HTML) {
     log('Try to open render passed html.');
     await page.setContent(src, puppeteerOptions);
