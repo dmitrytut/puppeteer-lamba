@@ -152,8 +152,13 @@ const handler = async (event: any) => {
       return createErrorResponse(e.message, undefined, results);
     }
 
-    // Check if error.
     const statusCode = response.status();
+    results = {
+      ...results,
+      responseCode: statusCode,
+    };
+
+    // Check if error.
     if (statusCode > 400) {
       return createErrorResponse(getStatusText(statusCode), statusCode, results);
     }
