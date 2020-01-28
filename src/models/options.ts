@@ -8,6 +8,12 @@ export interface Options {
   /** Determine list of external calls. */
   trackCalls?: boolean;
 
+  /** Skip taking screenshot. */
+  skipScreenshot?: boolean;
+
+  /** Load only html and js skipping loading another resources. */
+  justHtml?: boolean;
+
   /** Viewport height to render page with. */
   viewPortHeight?: number;
 
@@ -17,6 +23,6 @@ export interface Options {
   /** Make a full page screenshot. */
   fullPage?: boolean;
 
-  /** Password to connect to the proxy. */
+  /** UserAgent to set to the request. */
   userAgent?: string;
 }

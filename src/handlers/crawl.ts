@@ -21,14 +21,23 @@ const handler = async (event: any) => {
   const { src, storage = {}, proxy: proxySettings = {}, options = {} } = event.body as RequestBody;
   const { s3: s3Settings = ({} as S3Settings) } = storage;
   const { url, port, login, password } = proxySettings as Proxy;
-  const {
+  let {
     checkSpeed = true,
     trackCalls = true,
     fullPage = true,
+    skipScreenshot,
+    justHtml,
     viewPortHeight,
     viewPortWidth,
     userAgent,
   } = options;
+
+  // In case of rendering only html & js, don't check loading speed and skip screenshot taking.
+  if (justHtml) {
+    checkSpeed = false;
+    skipScreenshot = true;
+  }
+
   // We can't use networkidle0, because in this case we can't crawl sites with websockets.
   const puppeteerOptions: DirectNavigationOptions = { timeout: 120000, waitUntil: ["networkidle0", "load", "domcontentloaded"] };
   const isOffline = process.env.IS_OFFLINE;
@@ -98,7 +107,13 @@ const handler = async (event: any) => {
   page.on('request', request => {
     const url = request.url();
     externalRequests.push(url);
-    request.continue();
+
+    if (justHtml && request.resourceType() !== 'document' && request.resourceType() !== 'script') {
+      // In case of 'justHtml' skip all resources instead of html and scripts.
+      request.abort();
+    } else {
+      request.continue();
+    }
   });
   page.on('response', response => {
     const request = response.request();
@@ -213,27 +228,33 @@ const handler = async (event: any) => {
   // Get html.
   const html = await page.content();
 
-  // Generate screenshot.
-  let screenshotOptions: ScreenshotOptions = {
-    fullPage,
-    encoding: 'binary',
-  };
-  if (!store) {
-    screenshotOptions = {
-      ...screenshotOptions,
-      encoding: 'base64',
-    }
-  }
-
-  log(`Try to get page screenshot and store it as '${screenshotOptions.encoding}'`);
-
-  const screenshot = await page.screenshot(screenshotOptions);
-
   results = {
     ...results,
     html,
-    screenshot,
   };
+
+  if (!skipScreenshot) {
+    // Generate screenshot.
+    let screenshotOptions: ScreenshotOptions = {
+      fullPage,
+      encoding: 'binary',
+    };
+    if (!store) {
+      screenshotOptions = {
+        ...screenshotOptions,
+        encoding: 'base64',
+      }
+    }
+
+    log(`Try to get page screenshot and store it as '${screenshotOptions.encoding}'`);
+
+    const screenshot = await page.screenshot(screenshotOptions);
+
+    results = {
+      ...results,
+      screenshot,
+    };
+  }
 
   if (store) {
     log('Try to upload files to the S3.');
