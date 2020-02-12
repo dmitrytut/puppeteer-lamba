@@ -15,6 +15,7 @@ import { initializeS3, uploadResults } from '../helpers/s3';
 import { checkRequestData } from '../helpers/request';
 import { log } from '../helpers/logger';
 import { createErrorResponse } from '../helpers/response';
+import { isBase64 } from '../helpers/encoding';
 
 const handler = async (event: any) => {
   const { type = ESourceType.URL, store, proxy } = event.queryStringParameters as QueryParams;
@@ -30,6 +31,7 @@ const handler = async (event: any) => {
     viewPortHeight,
     viewPortWidth,
     userAgent,
+    script,
   } = options;
 
   // In case of rendering only html & js, don't check loading speed and skip screenshot taking.
@@ -85,7 +87,7 @@ const handler = async (event: any) => {
   const page = await browser.newPage();
 
   if (proxy && login && password) {
-    log('Try to authenticate at proxy server.');
+    log('Try to authenticate at the proxy server.');
 
     await page.authenticate({
       username: login,
@@ -199,6 +201,21 @@ const handler = async (event: any) => {
 
   // Wait for browser to finish executing JS.
   await page.waitFor(1000);
+
+  if (script) {
+    log('Try to execute script.');
+    const encoded = isBase64(script);
+
+    log(
+      Boolean(encoded)
+        ? 'Decoded script from Base64.'
+        : 'Script is in plain text.'
+    );
+
+    await Promise.resolve(
+      eval(encoded || script)
+    );
+  }
 
   // Get performance metrics.
   if (checkSpeed) {
