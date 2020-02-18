@@ -16,6 +16,7 @@ import { checkRequestData } from '../helpers/request';
 import { log } from '../helpers/logger';
 import { createErrorResponse } from '../helpers/response';
 import { isBase64 } from '../helpers/encoding';
+import { storeFields } from '../constants/storeFields';
 
 const handler = async (event: any) => {
   const { type = ESourceType.URL, store, proxy } = event.queryStringParameters as QueryParams;
@@ -281,9 +282,16 @@ const handler = async (event: any) => {
 
     try {
       // Upload files to the S3.
-      await uploadResults(s3, s3Settings, results);
+      const dataToStore = Object.keys(results)
+        .filter(key => storeFields.includes(key))
+        .reduce((obj: any, key) => {
+          obj[key] = results[key];
+          return obj;
+        }, {});
+
+      await uploadResults(s3, s3Settings, dataToStore);
     } catch (e) {
-      log('Error while uploading to the S3.');
+      log('Error while uploading to the S3. Error: ', e);
       return createErrorResponse(e.message, undefined, results, 500)
     }
   }

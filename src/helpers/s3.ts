@@ -24,7 +24,7 @@ export const initializeS3 = (): aws.S3 => {
   return new aws.S3(s3Params);
 };
 
-export const uploadResults = async (s3: aws.S3, s3Settings: S3Settings, results: ResponsePayload): Promise<any> => {
+export const uploadResults = async (s3: aws.S3, s3Settings: S3Settings, results: Partial<ResponsePayload>): Promise<any> => {
   const s3PutPromises = [];
 
   for (const key in results) {

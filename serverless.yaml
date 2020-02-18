@@ -17,6 +17,9 @@ plugins:
   - serverless-offline
 
 custom:
+  s3:
+    port: 8000
+    directory: ./s3-local
   documentation:
     info:
       description: "API for crawling and gathering information about sites."

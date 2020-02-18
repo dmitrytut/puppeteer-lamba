@@ -113,5 +113,6 @@ src/uploads/*
 
 tmp
 .idea
+./s3-local/*
 
 # End of https://www.gitignore.io/api/node,visualstudiocode

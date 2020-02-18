@@ -20,6 +20,7 @@
     "typescript": "3.6.4"
   },
   "devDependencies": {
+    "@types/node": "13.7.1",
     "@types/puppeteer-core": "1.9.0",
     "puppeteer": "2.0.0",
     "serverless-aws-documentation": "1.1.0",
