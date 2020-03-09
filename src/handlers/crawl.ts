@@ -48,6 +48,8 @@ const handler = async (event: any) => {
   let externalRequests: string[] = [];
   // Determined by url changing, not 3xx response.
   let heuristicRedirectChain: string[] = [];
+  // Final url after all redirects.
+  let finalUrl: string = '';
 
   log('Executed with event: ', event);
 
@@ -144,8 +146,13 @@ const handler = async (event: any) => {
     }
     previousUrlObject = urlObject;
   });
-  page.on("error", err => {
-    console.error("error", err);
+  page.on('error', err => {
+    console.error('error', err);
+  });
+  page.on('load', () => {
+    log('Try to determine final url.');
+
+    finalUrl = page.url();
   });
 
   // Set viewport.
@@ -181,7 +188,7 @@ const handler = async (event: any) => {
       return createErrorResponse(getStatusText(statusCode), statusCode, results);
     }
 
-    // Get redirect chain.
+    //#region Redirect chain
     log('Try to determine redirect chain.');
     const redirectChain = response.request().redirectChain() || [];
     results = {
@@ -195,6 +202,7 @@ const handler = async (event: any) => {
         !results.redirectChain.includes(url) && results.redirectChain.push(url)
       );
     }
+    //#endregion
   } else if (type === ESourceType.HTML) {
     log('Try to open render passed html.');
     await page.setContent(src, puppeteerOptions);
@@ -203,6 +211,7 @@ const handler = async (event: any) => {
   // Wait for browser to finish executing JS.
   await page.waitFor(1000);
 
+  //#region Script evaluation
   if (script) {
     log('Try to execute script.');
     const encoded = isBase64(script);
@@ -217,8 +226,9 @@ const handler = async (event: any) => {
       eval(encoded || script)
     );
   }
+  //#endregion
 
-  // Get performance metrics.
+  //#region Performance metrics
   if (checkSpeed) {
     log('Try to get performance metrics.');
 
@@ -232,8 +242,9 @@ const handler = async (event: any) => {
       }, {}),
     };
   }
+  //#endregion
 
-  // Get external requests.
+  //#region External requests
   if (trackCalls) {
     log('Try to get track calls.');
 
@@ -242,15 +253,25 @@ const handler = async (event: any) => {
       externalRequests
     };
   }
+  //#endregion
 
-  // Get html.
+  //#region Final url
+  results = {
+    ...results,
+    finalUrl,
+  };
+  //#endregion
+
+  //#region Html loading
   const html = await page.content();
 
   results = {
     ...results,
     html,
   };
+  //#endregion
 
+  //#region Screenshot
   if (!skipScreenshot) {
     // Generate screenshot.
     let screenshotOptions: ScreenshotOptions = {
@@ -273,7 +294,9 @@ const handler = async (event: any) => {
       screenshot,
     };
   }
+  //#endregion
 
+  //#region Store results
   if (store) {
     log('Try to upload files to the S3.');
 
@@ -295,6 +318,7 @@ const handler = async (event: any) => {
       return createErrorResponse(e.message, undefined, results, 500)
     }
   }
+  //#endregion
 
   // Close browser, we don't need it anymore.
   await browser.close();

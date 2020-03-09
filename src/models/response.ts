@@ -27,5 +27,8 @@ export interface ResponsePayload {
   /** Response code. */
   responseCode?: number;
 
+  /** Final url. */
+  finalUrl?: string;
+
   [key:string]: any;
 }
