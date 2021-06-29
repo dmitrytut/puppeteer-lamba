@@ -25,5 +25,6 @@
   "include": [
     "src/**/*"
   ],
-  "exclude": [".serverless", ".build", "node_modules"]
+  "exclude": [
+    ".serverless1", ".build", "node_modules"]
 }
